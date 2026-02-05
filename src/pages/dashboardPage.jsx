@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { 
-  MapPin, 
-  User, 
-  Phone, 
-  Mail, 
-  Building, 
-  CheckCircle, 
-  XCircle, 
-  Image as ImageIcon, 
+import axios from "axios"; // ✅ ADDED
+import {
+  MapPin,
+  User,
+  Phone,
+  Mail,
+  Building,
+  CheckCircle,
+  XCircle,
+  Image as ImageIcon,
   Hash,
   Search,
   Filter
@@ -44,27 +45,97 @@ export default function Dashboard() {
     loadData();
   }, []);
 
+  // ================= UPDATE STATUS =================
   const handleAction = async (id, action) => {
-    // Optimistic UI update
+
     setRequests(prev =>
-      prev.map(req => (req.id === id ? { ...req, status: action } : req))
+      prev.map(req =>
+        req.id === id ? { ...req, status: action } : req
+      )
     );
 
     try {
-      const reqRef = doc(db, "requests", id);
-      await updateDoc(reqRef, { status: action });
-    } catch (error) {
-      console.error("Error updating status:", error);
+
+      const ref = doc(db, "requests", id);
+
+      await updateDoc(ref, {
+        status: action
+      });
+
+    } catch (err) {
+      console.error("Update error:", err);
     }
   };
 
-  const filteredRequests = requests.filter(req => 
+
+  // ================= GENERATE DOCX =================
+  const generateDocx = async (request) => {
+    try {
+
+      const payload = {
+
+        // Integrator
+        Name_Id: request.integratorName,
+        EPC_Addr: request.officeAddress,
+        EPC_Per: request.contactPerson,
+        EPC_Con: request.contactNo,
+        EPC_Email: request.email,
+
+        // Customer
+        Cust_Addr: request.customerProjectSite,
+        Phone_Number: request.customerContact,
+        Alter_Number: request.customerAlternate,
+
+        Cust_Email: request.customerEmail,
+        Alter_Email: request.customerAltEmail || "",
+      };
+
+
+      // Serial Numbers (1–50)
+      for (let i = 1; i <= 50; i++) {
+        payload[`Serial_No${i}`] =
+          request.serialNumbers?.[i - 1] || "";
+      }
+
+
+      // Call backend
+      const res = await axios.post(
+        "http://localhost:5000/test",
+        payload,
+        {
+          responseType: "blob",
+        }
+      );
+
+
+      // Download
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `certificate-${request.id}.docx`;
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+
+    } catch (err) {
+      console.error("DOCX error:", err);
+      alert("Failed to generate certificate");
+    }
+  };
+
+
+  const filteredRequests = requests.filter(req =>
     filter === "all" ? true : req.status === filter
   );
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-800">
-      
+
       {/* --- Header --- */}
       {/* <header 
         className="shadow-lg sticky top-0 z-40 transition-all duration-300"
@@ -85,24 +156,23 @@ export default function Dashboard() {
 
       {/* --- Main Content --- */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
             <h2 className="text-3xl font-bold text-slate-800">New Requests</h2>
             <p className="text-slate-500 mt-1">Manage incoming installation verifications</p>
           </div>
-          
+
           <div className="flex bg-white p-1 rounded-lg shadow-sm border border-gray-200">
             {['all', 'pending', 'accepted', 'rejected'].map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize ${
-                  filter === status 
-                    ? `text-white shadow-sm` 
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize ${filter === status
+                    ? `text-white shadow-sm`
                     : 'text-slate-500 hover:bg-gray-100'
-                }`}
+                  }`}
                 style={{ backgroundColor: filter === status ? PRIMARY_COLOR : 'transparent' }}
               >
                 {status}
@@ -135,10 +205,11 @@ export default function Dashboard() {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredRequests.map((request) => (
-                  <RequestCard 
-                    key={request.id} 
-                    request={request} 
-                    onAction={handleAction} 
+                  <RequestCard
+                    key={request.id}
+                    request={request}
+                    onAction={handleAction}
+                    onGenerate={generateDocx} // ✅
                     primaryColor={PRIMARY_COLOR}
                     onViewImage={setSelectedImage}
                   />
@@ -151,17 +222,17 @@ export default function Dashboard() {
 
       {/* --- Image Modal --- */}
       {selectedImage && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-opacity"
           onClick={() => setSelectedImage(null)}
         >
           <div className="relative max-w-4xl max-h-screen">
-            <img 
-              src={selectedImage} 
-              alt="Full view" 
-              className="max-w-full max-h-[90vh] rounded-lg shadow-2xl" 
+            <img
+              src={selectedImage}
+              alt="Full view"
+              className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
             />
-            <button 
+            <button
               className="absolute -top-4 -right-4 bg-white text-black rounded-full p-2 hover:bg-gray-200 shadow-lg"
               onClick={() => setSelectedImage(null)}
             >
@@ -176,7 +247,7 @@ export default function Dashboard() {
 
 // --- Sub-Components ---
 
-function RequestCard({ request, onAction, primaryColor, onViewImage }) {
+function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate, }) {
   const isAccepted = request.status === "accepted";
   const isRejected = request.status === "rejected";
   const isPending = request.status === "pending";
@@ -185,18 +256,18 @@ function RequestCard({ request, onAction, primaryColor, onViewImage }) {
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
       {/* Card Header */}
       <div className="p-6 border-b border-gray-100 relative">
-        <div 
-          className="absolute top-0 left-0 w-1 h-full" 
+        <div
+          className="absolute top-0 left-0 w-1 h-full"
           style={{ backgroundColor: primaryColor }}
         ></div>
-        
+
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-xl font-bold text-slate-900 truncate pr-2">
             {request.integratorName}
           </h3>
           <StatusBadge status={request.status} />
         </div>
-        
+
         <div className="flex items-start text-sm text-slate-500 gap-2 mb-1">
           <MapPin size={16} className="mt-0.5 shrink-0" style={{ color: primaryColor }} />
           <span>{request.officeAddress}</span>
@@ -205,7 +276,7 @@ function RequestCard({ request, onAction, primaryColor, onViewImage }) {
 
       {/* Card Body */}
       <div className="p-6 space-y-6 flex-grow text-sm">
-        
+
         {/* Section: Integrator Contact */}
         <div className="space-y-2">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Integrator Details</p>
@@ -229,23 +300,23 @@ function RequestCard({ request, onAction, primaryColor, onViewImage }) {
 
         {/* Section: Customer Info */}
         <div className="bg-slate-50 p-4 rounded-xl space-y-3">
-           <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2">
             <Building size={16} style={{ color: primaryColor }} />
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: primaryColor }}>Customer Site</p>
           </div>
-          
+
           <p className="font-medium text-slate-900">{request.customerProjectSite}</p>
-          
+
           <div className="grid grid-cols-1 gap-2 text-slate-600">
             <div className="flex justify-between border-b border-slate-200 pb-1">
               <span>Contact:</span>
               <span className="font-medium text-right">{request.customerContact}</span>
             </div>
-             <div className="flex justify-between border-b border-slate-200 pb-1">
+            <div className="flex justify-between border-b border-slate-200 pb-1">
               <span>Phone:</span>
               <span className="text-right">{request.customerAlternate}</span>
             </div>
-             <div className="flex justify-between pb-1">
+            <div className="flex justify-between pb-1">
               <span>Email:</span>
               <span className="text-right truncate max-w-[150px]" title={request.customerEmail}>{request.customerEmail}</span>
             </div>
@@ -269,8 +340,8 @@ function RequestCard({ request, onAction, primaryColor, onViewImage }) {
           {request.sitePictures.length > 0 ? (
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {request.sitePictures.map((img, idx) => (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className="relative group shrink-0 cursor-pointer"
                   onClick={() => onViewImage(img)}
                 >
@@ -286,9 +357,9 @@ function RequestCard({ request, onAction, primaryColor, onViewImage }) {
               ))}
             </div>
           ) : (
-             <div className="text-slate-400 text-xs italic flex items-center gap-1">
-               <ImageIcon size={14} /> No images uploaded
-             </div>
+            <div className="text-slate-400 text-xs italic flex items-center gap-1">
+              <ImageIcon size={14} /> No images uploaded
+            </div>
           )}
         </div>
       </div>
@@ -298,7 +369,10 @@ function RequestCard({ request, onAction, primaryColor, onViewImage }) {
         {isPending ? (
           <>
             <button
-              onClick={() => onAction(request.id, "accept")}
+              onClick={() => {
+                onAction(request.id,"accepted");
+                onGenerate(request);
+              }}
               className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-green-600 hover:bg-green-50 hover:border-green-200 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-sm"
             >
               <CheckCircle size={18} />
@@ -314,7 +388,7 @@ function RequestCard({ request, onAction, primaryColor, onViewImage }) {
           </>
         ) : (
           <div className="col-span-2 text-center py-2 text-sm text-slate-500 bg-slate-100 rounded-lg border border-transparent">
-             Request {request.status}
+            Request {request.status}
           </div>
         )}
       </div>
