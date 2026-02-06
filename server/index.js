@@ -14,8 +14,8 @@ app.use(express.json({ limit: "10mb" }));
 // ================= EMAIL CONFIG =================
 
 // CHANGE THESE
-const EMAIL_USER = "yourgmail@gmail.com";
-const EMAIL_PASS = "your_app_password"; // App password
+const EMAIL_USER = "overflowedpixels@gmail.com";
+const EMAIL_PASS = process.env.EMAIL_PASS; // App password
 
 
 const transporter = nodemailer.createTransport({
