@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import HomePage from './pages/dashboardPage';
+import HomePage from './pages/HomePage';
 import Html2Docx from './pages/html2Docx';
 import FormPage from './pages/FormPage';
 import './App.css';
@@ -15,6 +15,7 @@ function App() {
             <div className="text-xl font-bold text-gray-800"></div>
             <div className="space-x-4">
               <Link to="/" className="text-gray-600 hover:text-blue-600 font-medium transition">Home</Link>
+              <Link to="/dashboard" className="text-gray-600 hover:text-blue-600 font-medium transition">Dashboard</Link>
               <Link to="/form" className="text-gray-600 hover:text-blue-600 font-medium transition">Form</Link>
               <Link to="/html2docx" className="text-gray-600 hover:text-blue-600 font-medium transition">HTML to DOCX</Link>
             </div>
@@ -23,7 +24,8 @@ function App() {
 
         {/* Routes */}
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/form" element={<FormPage />} />
           <Route path="/html2docx" element={<Html2Docx />} />
         </Routes>

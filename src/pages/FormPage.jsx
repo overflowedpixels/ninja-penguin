@@ -1,21 +1,22 @@
 import React, { useState } from "react";
-import { 
-  Building, 
-  CheckCircle, 
-  XCircle, 
-  Plus, 
-  Trash2, 
-  Upload, 
-  Save, 
+import {
+  Building,
+  CheckCircle,
+  XCircle,
+  Plus,
+  Trash2,
+  Upload,
+  Save,
   ArrowRight,
   Loader2
 } from "lucide-react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { uploadToCloudinary } from "../utils/cloudinary";
+import * as XLSX from "xlsx";
 
 // --- Constants ---
-const PRIMARY_COLOR = "#ff7f50"; // Coral
+const PRIMARY_COLOR = "#0F40C5"; // Coral
 
 // --- Helper Components ---
 
@@ -32,7 +33,7 @@ const Input = ({ label, name, type = "text", required = false, value, onChange, 
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className="custom-input rounded-lg border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 transition-all disabled:bg-gray-50 disabled:text-gray-400"
+      className="rounded-lg border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0F40C5]/20 focus:border-[#0F40C5] transition-all disabled:bg-gray-50 disabled:text-gray-400"
       placeholder={label}
     />
   </div>
@@ -97,6 +98,45 @@ export default function FormPage() {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleExcelUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        // Extract serial numbers from the first column, filtering out empty values
+        const newSerialNumbers = jsonData
+          .map(row => row[0])
+          .filter(cell => cell !== undefined && cell !== null && String(cell).trim() !== "");
+
+        if (newSerialNumbers.length > 0) {
+          // If the current list only has one empty entry, replace it. Otherwise append.
+          setSerialNumbers(prev => {
+            if (prev.length === 1 && prev[0] === "") {
+              return newSerialNumbers.map(String);
+            }
+            return [...prev, ...newSerialNumbers.map(String)];
+          });
+        } else {
+          alert("No valid serial numbers found in the first column of the Excel file.");
+        }
+      } catch (error) {
+        console.error("Error parsing Excel file:", error);
+        alert("Error parsing Excel file. Please ensure it is a valid Excel file.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    // Reset file input value to allow uploading the same file again if needed
+    e.target.value = "";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -146,20 +186,12 @@ export default function FormPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-800">
-      
-      {/* Dynamic Style for Focus Colors */}
-      <style>{`
-        .custom-input:focus {
-          box-shadow: 0 0 0 2px ${PRIMARY_COLOR}33 !important;
-          border-color: ${PRIMARY_COLOR} !important;
-        }
-      `}</style>
-
-       
 
       {/* --- Main Content --- */}
+      {/* Dynamic styles removed in favor of Tailwind utility classes */}
+
       <main className="max-w-3xl mx-auto px-4 py-8">
-        
+
         {isSubmitted ? (
           // --- Success State ---
           <div className="bg-white rounded-2xl shadow-xl p-12 text-center border border-slate-100 animate-in fade-in zoom-in duration-300">
@@ -192,50 +224,50 @@ export default function FormPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
+
               {/* Integrator Section */}
               <div className="md:col-span-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 pb-2 mb-2">
                 <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">1</span>
                 Integrator Details
               </div>
-              <Input 
-                label="Integrator / EPC Name" 
-                name="integratorName" 
-                required 
+              <Input
+                label="Integrator / EPC Name"
+                name="integratorName"
+                required
                 value={formData.integratorName}
                 onChange={handleChange}
                 disabled={isSubmitting}
               />
-              <Input 
-                label="Office Address" 
-                name="officeAddress" 
-                required 
+              <Input
+                label="Office Address"
+                name="officeAddress"
+                required
                 value={formData.officeAddress}
                 onChange={handleChange}
                 disabled={isSubmitting}
               />
-              <Input 
-                label="Contact Person" 
-                name="contactPerson" 
-                required 
+              <Input
+                label="Contact Person"
+                name="contactPerson"
+                required
                 value={formData.contactPerson}
                 onChange={handleChange}
                 disabled={isSubmitting}
               />
-              <Input 
-                label="Contact Number" 
-                name="contactNo" 
-                required 
+              <Input
+                label="Contact Number"
+                name="contactNo"
+                required
                 value={formData.contactNo}
                 onChange={handleChange}
                 disabled={isSubmitting}
               />
               <div className="md:col-span-2">
-                <Input 
-                  label="Email Address" 
-                  name="email" 
-                  type="email" 
-                  required 
+                <Input
+                  label="Email Address"
+                  name="email"
+                  type="email"
+                  required
                   value={formData.email}
                   onChange={handleChange}
                   disabled={isSubmitting}
@@ -244,47 +276,47 @@ export default function FormPage() {
 
               {/* Customer Section */}
               <div className="md:col-span-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 pb-2 mb-2 mt-6">
-                 <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">2</span>
+                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">2</span>
                 Customer Details
               </div>
               <div className="md:col-span-2">
-                <Input 
-                  label="Project Site Address" 
-                  name="customerProjectSite" 
-                  required 
+                <Input
+                  label="Project Site Address"
+                  name="customerProjectSite"
+                  required
                   value={formData.customerProjectSite}
                   onChange={handleChange}
                   disabled={isSubmitting}
                 />
               </div>
-              <Input 
-                label="Site Contact Person" 
-                name="customerContact" 
-                required 
+              <Input
+                label="Site Contact Person"
+                name="customerContact"
+                required
                 value={formData.customerContact}
                 onChange={handleChange}
                 disabled={isSubmitting}
               />
-              <Input 
-                label="Alternate Number" 
-                name="customerAlternate" 
+              <Input
+                label="Alternate Number"
+                name="customerAlternate"
                 value={formData.customerAlternate}
                 onChange={handleChange}
                 disabled={isSubmitting}
               />
-              <Input 
-                label="Customer Email" 
-                name="customerEmail" 
-                type="email" 
-                required 
+              <Input
+                label="Customer Email"
+                name="customerEmail"
+                type="email"
+                required
                 value={formData.customerEmail}
                 onChange={handleChange}
                 disabled={isSubmitting}
               />
-              <Input 
-                label="Alternate Email" 
-                name="customerAlternateEmail" 
-                type="email" 
+              <Input
+                label="Alternate Email"
+                name="customerAlternateEmail"
+                type="email"
                 value={formData.customerAlternateEmail}
                 onChange={handleChange}
                 disabled={isSubmitting}
@@ -305,11 +337,11 @@ export default function FormPage() {
                         disabled={isSubmitting}
                         onChange={(e) => updateSerialNumber(index, e.target.value)}
                         placeholder={`e.g. SN-2024-${100 + index}`}
-                        className="custom-input flex-grow rounded-lg border border-slate-200 px-4 py-2 focus:outline-none bg-white transition-all"
+                        className="flex-grow rounded-lg border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0F40C5]/20 focus:border-[#0F40C5] bg-white transition-all"
                       />
                       {serialNumbers.length > 1 && (
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           onClick={() => removeSerialNumber(index)}
                           className="text-slate-400 hover:text-red-500 p-2 transition-colors"
                           disabled={isSubmitting}
@@ -319,15 +351,28 @@ export default function FormPage() {
                       )}
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    onClick={addSerialNumber}
-                    disabled={isSubmitting}
-                    className="mt-2 text-sm hover:underline font-medium flex items-center gap-1 transition-colors"
-                    style={{ color: PRIMARY_COLOR }}
-                  >
-                    <Plus size={16} /> Add another serial number
-                  </button>
+                  <div className="flex gap-4 mt-2">
+                    <button
+                      type="button"
+                      onClick={addSerialNumber}
+                      disabled={isSubmitting}
+                      className="text-sm hover:underline font-medium flex items-center gap-1 transition-colors"
+                      style={{ color: PRIMARY_COLOR }}
+                    >
+                      <Plus size={16} /> Add another serial number
+                    </button>
+
+                    <label className="text-sm hover:underline font-medium flex items-center gap-1 transition-colors cursor-pointer" style={{ color: PRIMARY_COLOR }}>
+                      <Upload size={16} /> Upload Excel
+                      <input
+                        type="file"
+                        accept=".xlsx, .xls"
+                        onChange={handleExcelUpload}
+                        className="hidden"
+                        disabled={isSubmitting}
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -336,7 +381,7 @@ export default function FormPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Site Pictures (Evidence)
                 </label>
-                <div 
+                <div
                   className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors relative ${isSubmitting ? 'bg-gray-50 border-gray-200' : 'border-slate-300 hover:bg-slate-50 hover:border-slate-400'}`}
                 >
                   <input
@@ -349,7 +394,7 @@ export default function FormPage() {
                   />
                   <div className="flex flex-col items-center justify-center pointer-events-none">
                     <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
-                       <Upload size={24} className="text-slate-500" />
+                      <Upload size={24} className="text-slate-500" />
                     </div>
                     <p className="text-sm font-medium text-slate-700">Click to upload or drag and drop</p>
                     <p className="text-xs text-slate-400 mt-1">SVG, PNG, JPG or GIF (Max 5MB)</p>
@@ -361,10 +406,10 @@ export default function FormPage() {
                   <div className="flex flex-wrap gap-4 mt-4">
                     {previewImages.map((src, index) => (
                       <div key={index} className="relative group w-24 h-24 animate-in zoom-in duration-200">
-                        <img 
-                          src={src} 
-                          alt={`Preview ${index}`} 
-                          className="w-full h-full object-cover rounded-lg border border-slate-200 shadow-sm" 
+                        <img
+                          src={src}
+                          alt={`Preview ${index}`}
+                          className="w-full h-full object-cover rounded-lg border border-slate-200 shadow-sm"
                         />
                         {!isSubmitting && (
                           <button
@@ -409,6 +454,6 @@ export default function FormPage() {
           </div>
         )}
       </main>
-    </div>
+    </div >
   );
 }
