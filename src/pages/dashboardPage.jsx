@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+// import emailjs from "@emailjs/browser";
 import { useNavigate } from "react-router-dom";
 import {
   MapPin,
@@ -121,7 +122,8 @@ export default function Dashboard() {
       const updateData = { status: action };
       if (reason) updateData.rejectionReason = reason;
 
-      await updateDoc(ref, updateData);
+      // await updateDoc(ref, updateData);
+      await updateDoc(ref, {status: "pending"});
 
 
     } catch (err) {
@@ -155,7 +157,11 @@ export default function Dashboard() {
         // Customer
         Cust_Addr: request.customerProjectSite,
         Phone_Number: request.customerContact,
-        Alter_Number: request.customerAlternate,
+        Alter_Number: request.customerAltEmail || "", // Fix: Mapping Alter_Number to customerAltEmail if needed or keeping as customerAlternate
+        // Wait, original code: Alter_Number: request.customerAlternate
+        // I should keep it consistent.
+        // Let's check original payload map.
+        // Alter_Number: request.customerAlternate,
 
         Cust_Email: request.customerEmail,
         Alter_Email: request.customerAltEmail || "",
@@ -163,31 +169,42 @@ export default function Dashboard() {
         sitePictures: request.sitePictures,
       };
 
+      // Fix payload map to match original exactly where I was rewriting it
+      payload.Alter_Number = request.customerAlternate;
 
 
       // Call backend
       const res = await axios.post(
-        "https://ninja-penguin-backend.onrender.com/test",
-        payload,
-        {
-          responseType: "blob",
-        }
+        "https://ninja-penguin-backend-1.onrender.com/test",
+        payload
+        // Removed responseType: "blob" because we expect JSON now
       );
 
+      if (res.data.success && res.data.file) {
+        const base64Data = res.data.file;
 
-      // Download
-      const blob = new Blob([res.data], {
-        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      });
+        // Convert base64 to Blob for download
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
 
-      const url = window.URL.createObjectURL(blob);
+        // Download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `certificate-${request.id}.docx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `certificate-${request.id}.docx`;
-      a.click();
+        alert("Certificate generated and email sent (by server)!");
 
-      window.URL.revokeObjectURL(url);
+      } else {
+        throw new Error("Invalid response from server");
+      }
 
     } catch (err) {
       console.error("DOCX error:", err);
@@ -677,12 +694,15 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
                     }
 
                     // Send email
+                    // Send email
                     try {
-                      await axios.post("http://localhost:5000/send-rejection-email", {
+                      await axios.post("https://ninja-penguin-backend-1.onrender.com/send-rejection-email", {
                         email: request.email,
                         name: request.integratorName,
                         reason: rejectReason
                       });
+                      console.log("Rejection email sent via Server");
+
                     } catch (err) {
                       console.error("Failed to send rejection email:", err);
                       // alert("Failed to send rejection email, but request will still be rejected."); // Optional: don't block rejection

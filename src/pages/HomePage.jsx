@@ -1,401 +1,373 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export default function SolarEnergyPage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [visibleSections, setVisibleSections] = useState(new Set());
-
-  const heroRef = useRef(null);
-  const servicesRef = useRef(null);
-  const aboutRef = useRef(null);
-  const ctaRef = useRef(null);
+export default function HomePage() {
+  const canvasRef = useRef(null);
+  const navigate = useNavigate();
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    const observers = [];
-    const refs = [
-      { ref: heroRef, name: 'hero' },
-      { ref: servicesRef, name: 'services' },
-      { ref: aboutRef, name: 'about' },
-      { ref: ctaRef, name: 'cta' }
-    ];
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    refs.forEach(({ ref, name }) => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            setVisibleSections((prev) => {
-              const newSet = new Set(prev);
-              if (entry.isIntersecting) {
-                newSet.add(name);
-              } else {
-                newSet.delete(name);
-              }
-              return newSet;
-            });
-          });
-        },
-        { threshold: 0.2 }
-      );
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-      if (ref.current) {
-        observer.observe(ref.current);
-        observers.push(observer);
+    // Particle class
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.radius = Math.random() * 2 + 1;
       }
-    });
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(14, 165, 233, 0.8)';
+        ctx.fill();
+      }
+    }
+
+    // Create particles
+    const particles = [];
+    const particleCount = 80;
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle());
+    }
+
+    // Animation loop
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Update and draw particles
+      particles.forEach(particle => {
+        particle.update();
+        particle.draw();
+      });
+
+      // Draw connections
+      particles.forEach((p1, i) => {
+        particles.slice(i + 1).forEach(p2 => {
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < 120) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(14, 165, 233, ${0.2 * (1 - distance / 120)})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        });
+      });
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    const handleMouseMove = (e) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('mousemove', handleMouseMove);
 
     return () => {
-      observers.forEach((observer) => observer.disconnect());
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
     };
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-yellow-400 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-gray-900">SolarEnergy</span>
-            </div>
-
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="#home" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
-                Home
-              </a>
-              <a href="#about" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
-                About
-              </a>
-              <a href="#services" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
-                Services
-              </a>
-              <a href="#contact" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">
-                Contact
-              </a>
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                Get a Quote
-              </button>
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button 
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
-          </div>
-
-          {/* Mobile Menu */}
-          {mobileMenuOpen && (
-            <div className="md:hidden py-4 border-t">
-              <div className="flex flex-col space-y-4">
-                <a href="#home" className="text-gray-600 hover:text-gray-900 font-medium">Home</a>
-                <a href="#about" className="text-gray-600 hover:text-gray-900 font-medium">About</a>
-                <a href="#services" className="text-gray-600 hover:text-gray-900 font-medium">Services</a>
-                <a href="#contact" className="text-gray-600 hover:text-gray-900 font-medium">Contact</a>
-                <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium w-full">
-                  Get a Quote
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section 
-        ref={heroRef}
-        id="home" 
-        className={`relative h-[500px] flex items-center overflow-hidden transition-all duration-1000 ${
-          visibleSections.has('hero') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-        }`}
-      >
-        <img 
-          src="/solar main.png" 
-          alt="Solar panel installation with worker" 
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-white/0 to-transparent"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-sky-900 to-slate-900 overflow-hidden relative">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
         
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className={`max-w-xl transition-all duration-1000 delay-200 ${
-            visibleSections.has('hero') ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'
-          }`}>
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
-              Powering a<br />
-              Sustainable Future
+        * {
+          font-family: 'Space Grotesk', sans-serif;
+        }
+
+        @keyframes glow {
+          0%, 100% { 
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.5),
+                        0 0 40px rgba(14, 165, 233, 0.3),
+                        0 0 60px rgba(14, 165, 233, 0.2);
+          }
+          50% { 
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.7),
+                        0 0 60px rgba(14, 165, 233, 0.5),
+                        0 0 90px rgba(14, 165, 233, 0.3);
+          }
+        }
+
+        @keyframes fadeUp {
+          from {
+            opacity: 0;
+            transform: translateY(40px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+
+        .glow-effect {
+          animation: glow 3s ease-in-out infinite;
+        }
+
+        .fade-up {
+          animation: fadeUp 1s ease-out forwards;
+        }
+
+        .float-slow {
+          animation: float 6s ease-in-out infinite;
+        }
+
+        .gradient-text {
+          background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 50%, #7dd3fc 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .glass-card {
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .neon-border {
+          border: 2px solid transparent;
+          background: linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05)) padding-box,
+                      linear-gradient(135deg, #38bdf8, #0ea5e9) border-box;
+        }
+      `}</style>
+
+      {/* Particle Canvas Background */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 z-0"
+      />
+
+      {/* Gradient Orbs */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div
+          className="absolute w-96 h-96 bg-sky-500 rounded-full opacity-20 blur-3xl float-slow"
+          style={{
+            top: '20%',
+            left: '10%',
+            transform: `translate(${mousePos.x * 0.03}px, ${mousePos.y * 0.03}px)`
+          }}
+        />
+        <div
+          className="absolute w-96 h-96 bg-cyan-500 rounded-full opacity-20 blur-3xl float-slow"
+          style={{
+            bottom: '20%',
+            right: '10%',
+            animationDelay: '2s',
+            transform: `translate(${-mousePos.x * 0.03}px, ${-mousePos.y * 0.03}px)`
+          }}
+        />
+      </div>
+
+      {/* Main Content */}
+      <section className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 z-10">
+        <div className="max-w-6xl mx-auto text-center">
+          {/* Badge */}
+          <div className="fade-up mb-8 inline-block">
+            {/* <div className="glass-card px-6 py-3 rounded-full inline-block">
+              
+            </div> */}
+          </div>
+
+          {/* Main Heading */}
+          <div className="fade-up mb-8" style={{ animationDelay: '0.1s' }}>
+            <h1 className="text-6xl sm:text-7xl lg:text-8xl font-bold mb-6 leading-tight">
+              <span className="gradient-text">Innovation</span>
+              <br />
+              <span className="text-white">Meets Future</span>
             </h1>
-            <p className="text-lg text-white mb-8">
-              High-quality solar panels for homes and businesses
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all hover:scale-105">
-                Get Started
-              </button>
-              <button className="bg-white hover:bg-gray-50 text-gray-700 px-8 py-3 rounded-lg font-medium border border-gray-300 transition-all hover:scale-105">
-                Learn More
-              </button>
-            </div>
+            {/* <p className="text-xl sm:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+              Experience the perfect blend of cutting-edge technology and stunning aesthetics
+            </p> */}
           </div>
-        </div>
-      </section>
 
-      {/* Our Solar Solutions Section - Overlapping */}
-      <section 
-        ref={servicesRef}
-        id="services" 
-        className={`relative -mt-24 pb-16 bg-transparent transition-all duration-1000 ${
-          visibleSections.has('services') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-3xl p-8 md:p-12 shadow-xl">
-            <h2 className={`text-3xl md:text-4xl font-bold text-gray-900 mb-12 transition-all duration-700 delay-100 ${
-              visibleSections.has('services') ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'
-            }`}>
-              Our Solar Solutions
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Card 1 - Residential Solar */}
-              <div className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-700 delay-200 hover:-translate-y-2 ${
-                visibleSections.has('services') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-              }`}>
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src="/solar main.png" 
-                    alt="Residential solar panels on house" 
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                  />
-                  <div className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md">
-                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    Lorem ipsum
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  </p>
-                  <button className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors">
-                    Learn More
-                  </button>
-                </div>
-              </div>
-
-              {/* Card 2 - Commercial Solar */}
-              <div className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-700 delay-300 hover:-translate-y-2 ${
-                visibleSections.has('services') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-              }`}>
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src="/solar main.png" 
-                    alt="Commercial solar panel installation" 
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                  />
-                  <div className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md">
-                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    Lorem ipsum
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  </p>
-                  <button className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors">
-                    Learn More
-                  </button>
-                </div>
-              </div>
-
-              {/* Card 3 - Solar Maintenance */}
-              <div className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-700 delay-[400ms] hover:-translate-y-2 ${
-                visibleSections.has('services') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-              }`}>
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src="/solar main.png" 
-                    alt="Large scale solar panel field" 
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                  />
-                  <div className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md">
-                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    Lorem ipsum
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  </p>
-                  <button className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors">
-                    Learn More
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* CTA Buttons */}
+          <div
+            className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-20 fade-up"
+            style={{ animationDelay: '0.2s' }}
+          >
           </div>
-        </div>
-      </section>
-
-      {/* About Us Section - UPDATED */}
-      <section 
-        ref={aboutRef}
-        id="about" 
-        className={`py-16 bg-white transition-all duration-1000 ${
-          visibleSections.has('about') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-blue-50 to-white rounded-3xl p-8 md:p-12 shadow-lg relative overflow-hidden min-h-[600px]">
-            {/* Grid Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
-              {/* Top Left - Image 1 */}
-              <div className={`relative transition-all duration-700 delay-100 ${
-                visibleSections.has('about') ? 'opacity-100 translate-x-0 translate-y-0' : 'opacity-0 -translate-x-10 -translate-y-10'
-              }`}>
-                <div className="rounded-2xl overflow-hidden shadow-lg h-64 lg:h-80">
-                  <img 
-                    src="/solar main 1.png" 
-                    alt="Solar technicians installing panels" 
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                  />
-                </div>
-              </div>
-
-              {/* Top Right - Content */}
-              <div className={`relative z-10 transition-all duration-700 delay-200 ${
-                visibleSections.has('about') ? 'opacity-100 translate-x-0 translate-y-0' : 'opacity-0 translate-x-10 -translate-y-10'
-              }`}>
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                  About Us
-                </h2>
-                <p className="text-lg text-gray-700 mb-6">
-                  Leading Provider of Solar Energy Solutions
-                </p>
-                
-                <div className="space-y-4 mb-8">
-                  <div className={`flex items-center space-x-3 transition-all duration-500 delay-300 ${
-                    visibleSections.has('about') ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-5'
-                  }`}>
-                    <svg className="w-6 h-6 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">High-Quality Products</span>
-                  </div>
-                  <div className={`flex items-center space-x-3 transition-all duration-500 delay-[400ms] ${
-                    visibleSections.has('about') ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-5'
-                  }`}>
-                    <svg className="w-6 h-6 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Expert Installation</span>
-                  </div>
-                  <div className={`flex items-center space-x-3 transition-all duration-500 delay-500 ${
-                    visibleSections.has('about') ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-5'
-                  }`}>
-                    <svg className="w-6 h-6 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Affordable Pricing</span>
-                  </div>
-                </div>
-
-                <button className={`bg-white hover:bg-gray-50 text-blue-600 px-6 py-3 rounded-lg font-medium border-2 border-blue-600 transition-all hover:scale-105 duration-500 delay-[600ms] ${
-                  visibleSections.has('about') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
-                }`}>
-                  Learn more
-                </button>
-              </div>
-
-              {/* Bottom Right - Image 2 */}
-              <div className={`lg:col-start-2 relative transition-all duration-700 delay-300 ${
-                visibleSections.has('about') ? 'opacity-100 translate-x-0 translate-y-0' : 'opacity-0 translate-x-10 translate-y-10'
-              }`}>
-                <div className="rounded-2xl overflow-hidden shadow-lg h-64 lg:h-80 lg:mt-8">
-                  <img 
-                    src="/solar main.png" 
-                    alt="House with solar panels and service van" 
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Ready to Switch Section */}
-      <section 
-        ref={ctaRef}
-        className={`py-16 bg-white transition-all duration-1000 ${
-          visibleSections.has('cta') ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative rounded-3xl overflow-hidden shadow-lg">
-            <img 
-              src="/sky.png" 
-              alt="Solar panels against blue sky" 
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-blue-00/80"></div>
-            
-            <div className={`relative z-10 text-center py-20 px-4 transition-all duration-700 delay-200 ${
-              visibleSections.has('cta') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-            }`}>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Ready to Switch to Solar?
+          <div className="fade-up max-w-5xl mx-auto mb-20" style={{ animationDelay: '0.3s' }}>
+            <div className="text-center mb-12">
+              <h2 className="text-4xl sm:text-5xl font-bold mb-4">
+                <span className="gradient-text">How to Use</span>
               </h2>
-              <p className="text-lg text-white/90 mb-8 max-w-2xl mx-auto">
-                Contact us today for a free consultation
+              <p className="text-gray-300 text-lg">
+                Follow these simple steps to get started with our platform
               </p>
-              <button className="bg-white hover:bg-gray-100 text-blue-600 px-8 py-3 rounded-lg font-medium transition-all shadow-lg hover:scale-105">
-                Get a Free Quote
-              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                {
+                  step: '01',
+                  title: 'Click Get Started',
+                  desc: 'Click the "Get Started" button to access the dashboard',
+                 
+                },
+                {
+                  step: '02',
+                  title: 'Check the Request cards',
+                  desc: 'Check the Request cards by clicking the top left arrow icon',
+                  
+                },
+                {
+                  step: '03',
+                  title: 'Edit the Request cards',
+                  desc: 'Edit the request by clicking on the edit button',
+                  
+                },
+                {
+                  step: '04',
+                  title: 'Accept or Reject the Request',
+                  desc: 'Accept or Reject the request by clicking the respective buttons',
+                 
+                }
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  className="glass-card rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 group hover:scale-105 relative overflow-hidden"
+                >
+                  {/* Step number badge */}
+                  <div className="absolute top-4 right-4 text-sky-500/20 text-6xl font-bold">
+                    {item.step}
+                  </div>
+
+                  <div className="relative z-10">
+                    <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                      {item.icon}
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-3">
+                      {item.title}
+                    </h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Tips */}
+            <div className="glass-card rounded-2xl p-8 mt-8">
+              
+              <ul className="space-y-3 text-gray-300">
+                <li className="flex items-start gap-3">
+                  <span className="text-sky-400 mt-1">▸</span>
+                  <span>Use the navigation menu at the top to switch between different pages</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-sky-400 mt-1">▸</span>
+                  <span>All data is saved automatically when the user submit the form</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-sky-400 mt-1">▸</span>
+                  <span>You can edit or delete entries directly from the Dashboard</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-sky-400 mt-1">▸</span>
+                  <span>Accepting the request leads to the generation of certificates and automatic mailing to the authority and EPC</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-sky-400 mt-1">▸</span>
+                  <span>Rejecting the request leads to the automatic mailing to the authority and EPC</span>
+                </li>
+              </ul>
             </div>
           </div>
+              <button
+              onClick={() => navigate('/dashboard')}
+              className="group relative px-10 py-5 bg-sky-500 text-white rounded-xl font-semibold text-lg overflow-hidden transition-all duration-300 hover:scale-105 glow-effect"
+            >
+              <span className="relative z-10">Get Started</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-sky-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </button>
+          {/* Feature Cards */}
+          {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {[
+              { icon: '⚡', title: 'Lightning Fast', desc: 'Blazing fast performance', delay: '0.3s' },
+              { icon: '🎯', title: 'Precision', desc: 'Pixel-perfect design', delay: '0.4s' },
+              { icon: '🚀', title: 'Scalable', desc: 'Built for growth', delay: '0.5s' }
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                className="glass-card rounded-2xl p-8 hover:bg-white/10 transition-all duration-300 fade-up group hover:scale-105"
+                style={{ animationDelay: item.delay }}
+              >
+                <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                  {item.icon}
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">{item.title}</h3>
+                <p className="text-gray-400 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div> */}
+
+          {/* Stats */}
+          {/* <div
+            className="grid grid-cols-3 gap-8 max-w-3xl mx-auto mt-20 fade-up"
+            style={{ animationDelay: '0.6s' }}
+          >
+            {[
+              { number: '99%', label: 'Satisfaction' },
+              { number: '50K+', label: 'Users' },
+              { number: '24/7', label: 'Support' }
+            ].map((stat, idx) => (
+              <div key={idx} className="text-center">
+                <div className="text-4xl sm:text-5xl font-bold gradient-text mb-2">
+                  {stat.number}
+                </div>
+                <div className="text-gray-400 text-sm sm:text-base">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div> */}
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-yellow-400 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-white">SolarEnergy</span>
-            </div>
-            <p className="text-gray-400">
-              © 2024 SolarEnergy. All rights reserved. Powering a sustainable future.
-            </p>
-          </div>
+      <footer className="relative z-10 bg-transparent py-8 px-4 sm:px-6 lg:px-8 border-t border-white/10">
+        <div className="max-w-7xl mx-auto text-center">
+          {/* <p className="text-gray-400 text-sm">
+            © 2026 Your Brand. Crafted with precision.
+          </p> */}
         </div>
       </footer>
     </div>

@@ -14,28 +14,39 @@ export default function HtmlToDocx() {
       const response = await axios.post(
         "http://localhost:5000/test",
         {
-          "NameId":"Jithu",
-          "PhoneNumber":"1234567890",
-        },
-        {
-          responseType: "blob" // Important for file download
+          "NameId": "Jithu",
+          "PhoneNumber": "1234567890",
         }
+        // Removed responseType: "blob"
       );
 
-      // Create download link
-      const url = window.URL.createObjectURL(
-        new Blob([response.data])
-      );
+      if (response.data.success && response.data.file) {
+        const base64Data = response.data.file;
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "document.docx");
-      document.body.appendChild(link);
-      link.click();
+        // Convert base64 to Blob
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
 
-      link.remove();
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "document.docx");
+        document.body.appendChild(link);
+        link.click();
 
-      setMsg("✅ DOCX downloaded successfully!");
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        setMsg("✅ DOCX downloaded successfully!");
+      } else {
+        setMsg("❌ Failed to convert document: Invalid response");
+      }
     } catch (err) {
       console.error(err);
       setMsg("❌ Failed to convert document");

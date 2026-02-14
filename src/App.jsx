@@ -17,7 +17,6 @@ function App() {
               <Link to="/" className="text-gray-600 hover:text-blue-600 font-medium transition">Home</Link>
               <Link to="/dashboard" className="text-gray-600 hover:text-blue-600 font-medium transition">Dashboard</Link>
               <Link to="/form" className="text-gray-600 hover:text-blue-600 font-medium transition">Form</Link>
-              <Link to="/html2docx" className="text-gray-600 hover:text-blue-600 font-medium transition">HTML to DOCX</Link>
             </div>
           </div>
         </nav>
