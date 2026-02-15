@@ -209,7 +209,7 @@ export default function Dashboard() {
       };
 
       const res = await axios.post(
-        "http://localhost:5000/test",
+        "https://ninja-penguin-backend-1.onrender.com/test",
         payload
       );
 
@@ -808,4 +808,5 @@ function StatusBadge({ status }) {
       {status}
     </span>
   );
+
 }
