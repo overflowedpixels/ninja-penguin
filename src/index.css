@@ -1,1 +1,62 @@
 @import "tailwindcss";
+@import "locomotive-scroll/dist/locomotive-scroll.css";
+
+html.has-scroll-smooth {
+    overflow: hidden;
+}
+
+html.has-scroll-dragging {
+    user-select: none;
+}
+
+[data-scroll-container] {
+    perspective: 1px;
+}
+
+html ::scroll-marker {
+    display: none;
+}
+
+/* Custom Webkit Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #475569;
+    /* slate-600 */
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #3b82f6;
+    /* blue-500 */
+}
+
+/* Locomotive Scroll Styling */
+.c-scrollbar {
+    z-index: 9999 !important;
+}
+
+.c-scrollbar_thumb {
+    background-color: #475569 !important;
+    /* slate-600 */
+    opacity: 0.75 !important;
+    border-radius: 9999px !important;
+    width: 6px !important;
+    right: 2px !important;
+    transition: background-color 0.2s ease, transform 0.2s ease !important;
+}
+
+.c-scrollbar_thumb:hover {
+    background-color: #ffffff !important;
+    /* blue-500 */
+    opacity: 1 !important;
+}

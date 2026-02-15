@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 // import emailjs from "@emailjs/browser";
 import { useNavigate } from "react-router-dom";
+import toast, { Toaster } from "react-hot-toast";
 import {
   MapPin,
   User,
@@ -25,14 +26,15 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState("pending");
   const [lastDoc, setLastDoc] = useState(null);
   const [hasMore, setHasMore] = useState(true);
+  const [selectedIds, setSelectedIds] = useState(new Set()); // Track selected IDs
   const navigate = useNavigate();
 
   // --- Theme Constants ---
   const PRIMARY_COLOR = "#0F40C5"; // Coral
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 20;
 
   const fetchRequests = async (isNextPage = false) => {
     try {
@@ -43,12 +45,8 @@ export default function Dashboard() {
       }
 
       let q;
-
-      // Base query parts
       const collectionRef = collection(db, "requests");
 
-      // Construct query based on filter
-      // Note: Composite index might be required for status + createdAt
       if (filter !== "all") {
         q = query(
           collectionRef,
@@ -64,53 +62,98 @@ export default function Dashboard() {
         );
       }
 
-      // Apply pagination
       if (isNextPage && lastDoc) {
         q = query(q, startAfter(lastDoc));
       }
 
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
       const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
 
-      if (querySnapshot.docs.length < ITEMS_PER_PAGE) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
-      }
-
-      if (lastVisible) {
-        setLastDoc(lastVisible);
-      }
+      setHasMore(querySnapshot.docs.length >= ITEMS_PER_PAGE);
+      if (lastVisible) setLastDoc(lastVisible);
 
       if (isNextPage) {
         setRequests(prev => [...prev, ...data]);
       } else {
         setRequests(data);
+        setSelectedIds(new Set()); // Clear selection on new filter/load
       }
 
     } catch (error) {
       console.error("Error fetching data:", error);
+      toast.error("Failed to load requests");
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
   };
 
-  // Initial load & Filter change
   useEffect(() => {
-    setRequests([]); // Reset on filter change
+    setRequests([]);
     setLastDoc(null);
     setHasMore(true);
     fetchRequests(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
+  // ================= SELECTION LOGIC =================
+  const toggleSelect = (id, status) => {
+    if (status !== "pending" && !selectedIds.has(id)) return; // Allow deselecting, but prevention selection of non-pending
+
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleBulkAccept = async () => {
+    if (selectedIds.size === 0) return;
+
+    const count = selectedIds.size;
+    const idsToProcess = Array.from(selectedIds);
+
+    // Optimistic UI update for all
+    setRequests(prev => prev.map(req =>
+      idsToProcess.includes(req.id) ? { ...req, status: "accepted" } : req
+    ));
+
+    // Clear selection
+    setSelectedIds(new Set());
+
+    toast.success(`Processing ${count} requests...`);
+
+    // Process each one by one (Sequential)
+    for (const id of idsToProcess) {
+      const req = requests.find(r => r.id === id);
+      if (!req) continue;
+
+      try {
+        await updateDoc(doc(db, "requests", id), { status: "accepted" });
+
+        // Wait for doc generation/email to complete before moving to next
+        await generateDocx(req, async () => {
+          // Error callback
+          console.warn(`Background process failed for ${id}, reverting...`);
+          await handleAction(id, "pending");
+          toast.error(`Failed to process request for ${req.integratorName}, reverted.`);
+        });
+
+      } catch (err) {
+        console.error("Bulk update error:", err);
+        toast.error(`Failed to update ${req.integratorName}`);
+      }
+    }
+  };
+
 
   // ================= UPDATE STATUS =================
   const handleAction = async (id, action, reason = null) => {
-
     setRequests(prev =>
       prev.map(req =>
         req.id === id ? { ...req, status: action } : req
@@ -122,12 +165,16 @@ export default function Dashboard() {
       const updateData = { status: action };
       if (reason) updateData.rejectionReason = reason;
 
-      // await updateDoc(ref, updateData);
-      await updateDoc(ref, {status: "pending"});
-
+      if (action === "pending") {
+        // This handles the "revert" case specifically to ensure backend matches UI if we reverted
+        await updateDoc(ref, { status: "pending" });
+      } else {
+        await updateDoc(ref, updateData);
+      }
 
     } catch (err) {
       console.error("Update error:", err);
+      toast.error("Failed to update status");
     }
   };
 
@@ -137,11 +184,9 @@ export default function Dashboard() {
 
 
   // ================= GENERATE DOCX =================
-  const generateDocx = async (request) => {
+  const generateDocx = async (request, onError) => {
     try {
-
       const payload = {
-
         // Integrator
         Name_Id: request.integratorName,
         EPC_Addr: request.officeAddress,
@@ -153,37 +198,23 @@ export default function Dashboard() {
         INVOICE_No: request.premierInvoiceNo,
         ISSUE_DATE: request.certificateIssueDate,
 
-
         // Customer
         Cust_Addr: request.customerProjectSite,
         Phone_Number: request.customerContact,
-        Alter_Number: request.customerAltEmail || "", // Fix: Mapping Alter_Number to customerAltEmail if needed or keeping as customerAlternate
-        // Wait, original code: Alter_Number: request.customerAlternate
-        // I should keep it consistent.
-        // Let's check original payload map.
-        // Alter_Number: request.customerAlternate,
-
+        Alter_Number: request.customerAlternate || "",
         Cust_Email: request.customerEmail,
         Alter_Email: request.customerAltEmail || "",
         serialNumbers: request.serialNumbers,
         sitePictures: request.sitePictures,
       };
 
-      // Fix payload map to match original exactly where I was rewriting it
-      payload.Alter_Number = request.customerAlternate;
-
-
-      // Call backend
       const res = await axios.post(
-        "https://ninja-penguin-backend-1.onrender.com/test",
+        "http://localhost:5000/test",
         payload
-        // Removed responseType: "blob" because we expect JSON now
       );
 
       if (res.data.success && res.data.file) {
         const base64Data = res.data.file;
-
-        // Convert base64 to Blob for download
         const byteCharacters = atob(base64Data);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -192,7 +223,6 @@ export default function Dashboard() {
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
 
-        // Download
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -200,7 +230,7 @@ export default function Dashboard() {
         a.click();
         window.URL.revokeObjectURL(url);
 
-        alert("Certificate generated and email sent (by server)!");
+        toast.success(`Certificate sent for ${request.integratorName}`);
 
       } else {
         throw new Error("Invalid response from server");
@@ -208,13 +238,15 @@ export default function Dashboard() {
 
     } catch (err) {
       console.error("DOCX error:", err);
-      alert("Failed to generate certificate");
+      toast.error(`Failed to generate/send for ${request.integratorName}. Reverting...`);
+      if (onError) onError();
     }
   };
 
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-800">
+      <Toaster position="bottom-right" reverseOrder={false} />
 
       {/* --- Main Content --- */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -226,20 +258,33 @@ export default function Dashboard() {
             <p className="text-slate-500 mt-1">Manage incoming installation verifications</p>
           </div>
 
-          <div className="flex bg-white p-1 rounded-lg shadow-sm border border-gray-200">
-            {['all', 'pending', 'accepted', 'rejected'].map((status) => (
+          <div className="flex gap-4 items-center">
+            {/* Bulk Accept Button */}
+            {selectedIds.size > 0 && (
               <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize ${filter === status
-                  ? `text-white shadow-sm`
-                  : 'text-slate-500 hover:bg-gray-100'
-                  }`}
-                style={{ backgroundColor: filter === status ? PRIMARY_COLOR : 'transparent' }}
+                onClick={handleBulkAccept}
+                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:bg-green-700 transition-all animate-in fade-in"
               >
-                {status}
+                <CheckCircle size={18} />
+                Bulk Accept ({selectedIds.size})
               </button>
-            ))}
+            )}
+
+            <div className="flex bg-white p-1 rounded-lg shadow-sm border border-gray-200">
+              {['pending', 'accepted', 'rejected'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize ${filter === status
+                    ? `text-white shadow-sm`
+                    : 'text-slate-500 hover:bg-gray-100'
+                    }`}
+                  style={{ backgroundColor: filter === status ? PRIMARY_COLOR : 'transparent' }}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -277,6 +322,8 @@ export default function Dashboard() {
                       onViewImage={setSelectedImage}
                       onEdit={(id) => navigate(`/form?id=${id}`)}
                       onUpdate={handleUpdate}
+                      isSelected={selectedIds.has(request.id)}
+                      onToggleSelect={() => toggleSelect(request.id, request.status)}
                     />
                   ))}
                 </div>
@@ -333,7 +380,7 @@ export default function Dashboard() {
 
 // --- Sub-Components ---
 
-function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate, onEdit, onUpdate }) {
+function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate, onEdit, onUpdate, isSelected, onToggleSelect }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -361,19 +408,17 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
       await updateDoc(doc(db, "requests", request.id), editData);
       if (onUpdate) onUpdate(request.id, editData);
       setIsEditing(false);
-      alert("Changes saved successfully!");
+      toast.success("Changes saved successfully!");
     } catch (err) {
       console.error("Error saving changes:", err);
-      alert("Failed to save changes");
+      toast.error("Failed to save changes");
     }
   };
 
   const isPending = request.status === "pending";
 
-
-
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
+    <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col ${isSelected ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-100'}`}>
       {/* Card Header */}
       <div className="p-6 border-b border-gray-100 relative">
         <div
@@ -382,9 +427,20 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
         ></div>
 
         <div className="flex justify-between items-start mb-2">
-          <h3 className="text-xl font-bold text-slate-900 truncate pr-2">
-            {request.integratorName}
-          </h3>
+          <div className="flex items-center gap-3 overflow-hidden">
+            {/* CHECKBOX */}
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={onToggleSelect}
+              disabled={request.status !== "pending"}
+              className={`w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer ${request.status !== "pending" ? "opacity-30 cursor-not-allowed" : ""}`}
+            />
+            <h3 className="text-xl font-bold text-slate-900 truncate pr-2">
+              {request.integratorName}
+            </h3>
+          </div>
+
           <div className="flex items-center gap-0.5">
 
             <StatusBadge status={request.status} className="mr-8" />
@@ -397,14 +453,14 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
           </div>
         </div>
 
-        <div className="flex items-start text-sm text-slate-500 gap-2 mb-1">
+        <div className="flex items-start text-sm text-slate-500 gap-2 mb-1 pl-8">
           <MapPin size={16} className="mt-0.5 shrink-0" style={{ color: primaryColor }} />
           <span>{request.officeAddress}</span>
         </div>
 
         {/* Summary (Visible when collapsed) */}
         {!isExpanded && !isEditing && (
-          <div className="mt-4 text-xs text-slate-400 flex gap-4">
+          <div className="mt-4 text-xs text-slate-400 flex gap-4 pl-8">
             <span className="flex items-center gap-1"><User size={12} /> {request.contactPerson}</span>
             <span className="flex items-center gap-1"><Hash size={12} /> {request.serialNumbers?.length || 0} Serial Nos</span>
           </div>
@@ -621,9 +677,15 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
           <>
             <button
               onClick={async () => {
-                await onGenerate(request);
+                // 1. Optimistic Update: Immediately mark as accepted
                 await onAction(request.id, "accepted");
 
+                // 2. Background Process: Generate Doc & Email
+                // We pass a tailored onError callback to revert the status if it fails
+                onGenerate(request, async () => {
+                  console.warn("Background process failed, reverting status...");
+                  await onAction(request.id, "pending");
+                });
               }}
               className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-green-600 hover:bg-green-50 hover:border-green-200 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-sm"
             >
@@ -689,7 +751,7 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
                 <button
                   onClick={async () => {
                     if (!rejectReason.trim()) {
-                      alert("Please provide a reason");
+                      toast.error("Please provide a reason");
                       return;
                     }
 
@@ -706,10 +768,12 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
                     } catch (err) {
                       console.error("Failed to send rejection email:", err);
                       // alert("Failed to send rejection email, but request will still be rejected."); // Optional: don't block rejection
+                      toast.error("Failed to send rejection email");
                     }
 
                     await onAction(request.id, "rejected", rejectReason);
                     setShowRejectModal(false);
+                    toast.success("Request rejected successfully");
                   }}
                   className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm"
                 >

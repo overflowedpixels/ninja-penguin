@@ -14,6 +14,8 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import * as XLSX from "xlsx";
+import trueLogo from "../assets/Images/TruesunLogo.png";
+import premierEnergiesLogo from "../assets/Images/PremierLogo.png";
 
 // --- Constants ---
 const PRIMARY_COLOR = "#0F40C5"; // Coral
@@ -214,9 +216,23 @@ export default function FormPage() {
         ) : (
           // --- Form State ---
           <div className="bg-white shadow-xl rounded-2xl p-8 border border-slate-100">
+            {/* Logos Header */}
+            <div className="flex justify-start items-center mb-6">
+              <img
+                src={premierEnergiesLogo}
+                alt="Premier Energies"
+                className="h-20 w-auto object-contain"
+              />
+              <img
+                src={trueLogo}
+                alt="TRUE Brand"
+                className="h-24 w-auto object-contain"
+              />
+            </div>
+
             <div className="text-center mb-8 border-b border-gray-100 pb-6">
               <h1 className="text-2xl font-bold mb-2 text-slate-800">
-                Installation Verification Form
+                Premier Energies Warranty certificate Request
               </h1>
               <p className="text-slate-500 text-sm">
                 Please fill out the details below to verify your installation site.
