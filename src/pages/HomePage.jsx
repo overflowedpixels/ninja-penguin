@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import trueLogo from '../assets/Images/TruesunLogo.png';
-import heroImage from '/home/codewizard/.gemini/antigravity/brain/9fd588a0-8691-4ab3-bc3e-c8579fee9a07/business_professional_hero_1771155665203.png'; // Using the same image
+import heroImage from '../assets/Images/women.png'; // Using the same image
 import { Phone, Mail, Globe, Search, UserPlus, FileText, FileCheck, ClipboardCheck, FileSearch, Send, FileOutput } from 'lucide-react';
 
 export default function HomePage() {
