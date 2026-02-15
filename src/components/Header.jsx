@@ -4,10 +4,10 @@ import { Link } from 'react-router-dom';
 function Header() {
     return (
         <header className="bg-white shadow-sm relative z-50">
-            <div className="max-w-7xl mx-auto px-4 sm: lg: h-20 flex justify-between items-center">
+            <div className="max-w-7xl mx-auto px-8 sm: lg: h-20 flex justify-between items-center">
                 {/* Logo */}
                 <div className="flex items-center justify-center">
-                    <img src={trueLogo} alt="TrueSun" className="h-32 w-auto" />
+                    <img src={trueLogo} alt="TrueSun" className="h-15 w-auto" />
                 </div>
 
                 {/* Links */}

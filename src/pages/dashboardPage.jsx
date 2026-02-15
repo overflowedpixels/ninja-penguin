@@ -213,26 +213,10 @@ export default function Dashboard() {
         payload
       );
 
-      if (res.data.success && res.data.file) {
-        const base64Data = res.data.file;
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `certificate-${request.id}.docx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-
+      if (res.data.success) {
         toast.success(`Certificate sent for ${request.integratorName}`);
-
       } else {
+        toast.error(`Failed to generate/send for ${request.integratorName}. Reverting...`);
         throw new Error("Invalid response from server");
       }
 
@@ -808,5 +792,4 @@ function StatusBadge({ status }) {
       {status}
     </span>
   );
-
 }

@@ -226,7 +226,7 @@ export default function FormPage() {
               <img
                 src={trueLogo}
                 alt="TRUE Brand"
-                className="h-24 w-auto object-contain"
+                className="h-10 w-auto object-contain"
               />
             </div>
 
