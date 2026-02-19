@@ -209,7 +209,7 @@ export default function Dashboard() {
       };
 
       const res = await axios.post(
-        "https://ninja-penguin-backend-1.onrender.com/test",
+        "http://localhost:5000/test",
         payload
       );
 
@@ -421,7 +421,7 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
               className={`w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer ${request.status !== "pending" ? "opacity-30 cursor-not-allowed" : ""}`}
             />
             <h3 className="text-xl font-bold text-slate-900 truncate pr-2">
-              {request.integratorName}
+              {request.warrantyCertificateNo}
             </h3>
           </div>
 
@@ -742,7 +742,7 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
                     // Send email
                     // Send email
                     try {
-                      await axios.post("https://ninja-penguin-backend-1.onrender.com/send-rejection-email", {
+                      await axios.post("http://localhost:5000/send-rejection-email", {
                         email: request.email,
                         name: request.integratorName,
                         reason: rejectReason
