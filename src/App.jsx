@@ -24,7 +24,7 @@ function AppContent() {
           <Route path="/" element={<HomePage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/form" element={<FormPage />} />
-          <Route path="*" element={<Page401/>} />
+          <Route path="*" element={<Page401 />} />
         </Routes>
         <Footer />
       </div>
@@ -32,10 +32,14 @@ function AppContent() {
   );
 }
 
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 function App() {
   return (
     <Router>
       <AppContent />
+      <ToastContainer />
     </Router>
   );
 }

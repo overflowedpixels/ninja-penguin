@@ -14,7 +14,6 @@ function Header() {
                 <nav className="hidden md:flex items-center gap-8 font-bold text-sm text-slate-700 uppercase tracking-wide">
                     <Link to="/" className="hover:text-blue-600 transition-colors">HOME</Link>
                     <Link to="/dashboard" className="hover:text-blue-600 transition-colors">DASHBOARD</Link>
-                    <Link to="/form" className="hover:text-blue-600 transition-colors">FORM</Link>
                 </nav>
             </div>
         </header>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 // import emailjs from "@emailjs/browser";
 import { useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "react-toastify";
 import {
   MapPin,
   User,
@@ -17,7 +17,7 @@ import {
   ChevronDown,
   ChevronUp
 } from "lucide-react";
-import { collection, query, getDocs, orderBy, doc, updateDoc, where, limit, startAfter } from "firebase/firestore";
+import { collection, query, getDocs, orderBy, doc, updateDoc, where, limit, startAfter, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 
 
@@ -209,20 +209,20 @@ export default function Dashboard() {
       };
 
       const res = await axios.post(
-        "https://ninja-penguin-backend-1.onrender.com/test",
+        "http://localhost:5000/test",
         payload
       );
 
       if (res.data.success) {
-        toast.success(`Certificate sent for ${request.integratorName}`);
+        toast.success(`Certificate sent to Premier Energies`);
       } else {
-        toast.error(`Failed to generate/send for ${request.integratorName}. Reverting...`);
+        toast.error(`Failed to generate/send for Premier Energies. Reverting...`);
         throw new Error("Invalid response from server");
       }
 
     } catch (err) {
       console.error("DOCX error:", err);
-      toast.error(`Failed to generate/send for ${request.integratorName}. Reverting...`);
+      toast.error(`Failed to generate/send for Premier Energies. Reverting...`);
       if (onError) onError();
     }
   };
@@ -230,7 +230,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-800">
-      <Toaster position="bottom-right" reverseOrder={false} />
+      {/* Toaster removed, using global ToastContainer from App.jsx */}
 
       {/* --- Main Content --- */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -239,7 +239,6 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
             <h2 className="text-3xl font-bold text-slate-800">New Requests</h2>
-            <p className="text-slate-500 mt-1">Manage incoming installation verifications</p>
           </div>
 
           <div className="flex gap-4 items-center">
@@ -661,15 +660,19 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
           <>
             <button
               onClick={async () => {
-                // 1. Optimistic Update: Immediately mark as accepted
-                await onAction(request.id, "accepted");
-
                 // 2. Background Process: Generate Doc & Email
                 // We pass a tailored onError callback to revert the status if it fails
-                onGenerate(request, async () => {
-                  console.warn("Background process failed, reverting status...");
-                  await onAction(request.id, "pending");
-                });
+                if (editData.warrantyCertificateNo && editData.premierInvoiceNo && editData.certificateIssueDate && editData.productDescription) {
+                  onGenerate(request, async () => {
+                    console.warn("Background process failed, reverting status...");
+                    await onAction(request.id, "pending");
+                  });
+                  toast.success("Email drafting started");
+                  await onAction(request.id, "accepted");
+                } else {
+                  toast.error("Please fill all the fields");
+                  return;
+                }
               }}
               className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-green-600 hover:bg-green-50 hover:border-green-200 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-sm"
             >
@@ -740,12 +743,21 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
                     }
 
                     // Send email
-                    // Send email
                     try {
-                      await axios.post("https://ninja-penguin-backend-1.onrender.com/send-rejection-email", {
+                      await axios.post("http://localhost:5000/send-rejection-email", {
                         email: request.email,
                         name: request.integratorName,
-                        reason: rejectReason
+                        reason: rejectReason,
+                        WARR_No: request.warrantyCertificateNo,
+                      });
+
+                      toast.success("Rejection email sent successfully");
+
+                      const requestRef = doc(db, "requests", request.id);
+                      await updateDoc(requestRef, {
+                        status: "rejected",
+                        rejectReason: rejectReason,
+                        updatedAt: serverTimestamp()
                       });
                       console.log("Rejection email sent via Server");
 
