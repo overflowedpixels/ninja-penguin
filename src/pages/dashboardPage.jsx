@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 // import emailjs from "@emailjs/browser";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -18,7 +17,8 @@ import {
   ChevronUp
 } from "lucide-react";
 import { collection, query, getDocs, orderBy, doc, updateDoc, where, limit, startAfter, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
+import { logAdminAction, generateDocument, sendRejectionEmail } from "../services/api";
 
 
 export default function Dashboard() {
@@ -118,42 +118,65 @@ export default function Dashboard() {
     const count = selectedIds.size;
     const idsToProcess = Array.from(selectedIds);
 
+    const currentUser = auth.currentUser;
+    const adminEmail = currentUser ? currentUser.email : "unknown_admin";
+
+
     // Optimistic UI update for all
     setRequests(prev => prev.map(req =>
-      idsToProcess.includes(req.id) ? { ...req, status: "accepted" } : req
+      idsToProcess.includes(req.id) && req.certificateIssueDate && req.warrantyCertificateNo && req.premierInvoiceNo && req.productDescription ? { ...req, status: "accepted" } : req
     ));
 
     // Clear selection
     setSelectedIds(new Set());
 
-    toast.success(`Processing ${count} requests...`);
+    toast.success(`Processing requests...`);
 
     // Process each one by one (Sequential)
     for (const id of idsToProcess) {
       const req = requests.find(r => r.id === id);
       if (!req) continue;
+      if (req.certificateIssueDate && req.warrantyCertificateNo && req.premierInvoiceNo && req.productDescription) {
+        try {
+          await updateDoc(doc(db, "requests", id), { status: "accepted" });
+          // Wait for doc generation/email to complete before moving to next
+          await generateDocx(req, async () => {
+            // Error callback
+            console.warn(`Background process failed for ${id}, reverting...`);
+            await handleAction(id, "pending");
+            toast.error(`Failed to process request for ${req.integratorName}, reverted.`);
+          }).then(async () => {
+            toast.success(`Request processed successfully for ${req.warrantyCertificateNo}`);
+            try {
+              await logAdminAction(adminEmail, "BULK ACCEPTED", {
+                warrantyCertificateNo: req.warrantyCertificateNo,
+                integratorName: req.integratorName,
+                reason: "Bulk Accept"
+              });
+            } catch (logErr) {
+              console.error("Failed to post admin log:", logErr);
+            }
+          });
 
-      try {
-        await updateDoc(doc(db, "requests", id), { status: "accepted" });
-
-        // Wait for doc generation/email to complete before moving to next
-        await generateDocx(req, async () => {
-          // Error callback
-          console.warn(`Background process failed for ${id}, reverting...`);
-          await handleAction(id, "pending");
-          toast.error(`Failed to process request for ${req.integratorName}, reverted.`);
-        });
-
-      } catch (err) {
-        console.error("Bulk update error:", err);
-        toast.error(`Failed to update ${req.integratorName}`);
+        } catch (err) {
+          console.error("Bulk update error:", err);
+          toast.error(`Failed to update ${req.warrantyCertificateNo}`);
+          await updateDoc(doc(db, "requests", id), { status: "pending" });
+        }
+      } else {
+        toast.error(`Please fill all the fields for ${req.warrantyCertificateNo}`);
       }
+
     }
   };
 
 
   // ================= UPDATE STATUS =================
   const handleAction = async (id, action, reason = null) => {
+    // We need to know who is acting, use the auth instance
+    const currentUser = auth.currentUser;
+    const adminEmail = currentUser ? currentUser.email : "unknown_admin";
+
     setRequests(prev =>
       prev.map(req =>
         req.id === id ? { ...req, status: action } : req
@@ -170,6 +193,20 @@ export default function Dashboard() {
         await updateDoc(ref, { status: "pending" });
       } else {
         await updateDoc(ref, updateData);
+
+        // Find the request details for logging
+        const reqDetail = requests.find(r => r.id === id);
+        if (reqDetail && action !== "pending") {
+          try {
+            await logAdminAction(adminEmail, action.toUpperCase(), {
+              warrantyCertificateNo: reqDetail.warrantyCertificateNo,
+              integratorName: reqDetail.integratorName,
+              reason: reason || null
+            });
+          } catch (logErr) {
+            console.error("Failed to post admin log:", logErr);
+          }
+        }
       }
 
     } catch (err) {
@@ -208,12 +245,9 @@ export default function Dashboard() {
         sitePictures: request.sitePictures,
       };
 
-      const res = await axios.post(
-        "https://ninja-penguin-backend-1.onrender.com/test",
-        payload
-      );
+      const data = await generateDocument(payload);
 
-      if (res.data.success) {
+      if (data.success) {
         toast.success(`Certificate sent to Premier Energies`);
       } else {
         toast.error(`Failed to generate/send for Premier Energies. Reverting...`);
@@ -744,7 +778,7 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
 
                     // Send email
                     try {
-                      await axios.post("https://ninja-penguin-backend-1.onrender.com/send-rejection-email", {
+                      await sendRejectionEmail({
                         email: request.email,
                         name: request.integratorName,
                         reason: rejectReason,
