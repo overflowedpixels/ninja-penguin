@@ -209,7 +209,7 @@ export default function Dashboard() {
       };
 
       const res = await axios.post(
-        "http://localhost:5000/test",
+        "https://ninja-penguin-backend-1.onrender.com/test",
         payload
       );
 
@@ -744,7 +744,7 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
 
                     // Send email
                     try {
-                      await axios.post("http://localhost:5000/send-rejection-email", {
+                      await axios.post("https://ninja-penguin-backend-1.onrender.com/send-rejection-email", {
                         email: request.email,
                         name: request.integratorName,
                         reason: rejectReason,
