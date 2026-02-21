@@ -479,7 +479,7 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
         {!isExpanded && !isEditing && (
           <div className="mt-4 text-xs text-slate-400 flex gap-4 pl-8">
             <span className="flex items-center gap-1"><User size={12} /> {request.contactPerson}</span>
-            <span className="flex items-center gap-1"><Hash size={12} /> {request.serialNumbers?.length || 0} Serial Nos</span>
+            <span className="flex items-center gap-1"><Hash size={12} /> {Array.isArray(request.serialNumbers) ? request.serialNumbers.length : 0} Serial Nos</span>
           </div>
         )}
       </div>
@@ -520,11 +520,11 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
             <div className="flex items-center gap-2">
               <Mail size={16} className="text-slate-400" />
               {!isEditing ? (
-                <p>{editData.officeAddress}</p>
+                <p>{editData.email}</p>
               ) : (
                 <textarea
-                  value={editData.officeAddress || ""}
-                  onChange={(e) => handleChange("Mail", e.target.value)}
+                  value={editData.email || ""}
+                  onChange={(e) => handleChange("email", e.target.value)}
                   className="border rounded px-2 py-1 text-sm w-full"
                   rows={2}
                 />
@@ -596,14 +596,18 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
               <Hash size={16} className="text-slate-400 mt-0.5" />
               <div className="flex flex-wrap gap-1">
                 {!isEditing ? (
-                  editData.serialNumbers?.map((sn, i) => (
+                  Array.isArray(editData.serialNumbers) ? editData.serialNumbers.map((sn, i) => (
                     <span key={i} className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-mono border border-gray-200">
                       {sn}
                     </span>
-                  ))
+                  )) : (editData.serialNumbers ? (
+                    <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-mono border border-gray-200">
+                      {String(editData.serialNumbers)}
+                    </span>
+                  ) : null)
                 ) : (
                   <textarea
-                    value={editData.serialNumbers?.join(", ") || ""}
+                    value={Array.isArray(editData.serialNumbers) ? editData.serialNumbers.join(", ") : (editData.serialNumbers || "")}
                     onChange={(e) => handleChange("serialNumbers", e.target.value.split(",").map(s => s.trim()))}
                     placeholder="Serial Numbers (comma separated)"
                     className="border rounded px-2 py-1 text-sm w-full font-mono"
