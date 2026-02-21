@@ -546,11 +546,11 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
 
                 <div className="grid grid-cols-1 gap-2 text-slate-600">
                   <div className="flex justify-between border-b border-slate-200 pb-1">
-                    <span>Contact:</span>
+                    <span>Contact Number:</span>
                     <span className="font-medium text-right">{editData.customerContact}</span>
                   </div>
                   <div className="flex justify-between border-b border-slate-200 pb-1">
-                    <span>Phone:</span>
+                    <span>Alternate Number:</span>
                     <span className="text-right">{editData.customerAlternate}</span>
                   </div>
                   <div className="flex justify-between pb-1">
