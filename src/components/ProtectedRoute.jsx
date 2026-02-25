@@ -27,7 +27,7 @@ export default function ProtectedRoute({ children, superAdminOnly = false }) {
         return <Navigate to="/login" replace />;
     }
 
-    if (superAdminOnly && user.email !== 'superadmin@truesuntradingcompany.com') {
+    if (superAdminOnly && user.email?.toLowerCase() !== import.meta.env.VITE_SUPER_ADMIN_EMAIL?.toLowerCase()) {
         return <Navigate to="/dashboard" replace />;
     }
 

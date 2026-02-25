@@ -10,9 +10,10 @@ export default function SuperAdminLogsPage() {
     useEffect(() => {
         const fetchLogs = async () => {
             try {
-                const data = await fetchAdminLogs('superadmin@truesuntradingcompany.com');
+                const data = await fetchAdminLogs(import.meta.env.VITE_SUPER_ADMIN_EMAIL);
 
                 if (data.success) {
+                    console.log('Fetched logs:', data.logs);
                     setLogs(data.logs);
                 } else {
                     toast.error(data.error || 'Failed to fetch logs');

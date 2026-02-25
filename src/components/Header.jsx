@@ -43,7 +43,7 @@ function Header() {
                     <Link to="/" className="hover:text-blue-600 transition-colors">HOME</Link>
                     <Link to="/dashboard" className="hover:text-blue-600 transition-colors">DASHBOARD</Link>
 
-                    {user?.email === 'superadmin@truesuntradingcompany.com' && (
+                    {user?.email?.toLowerCase() === import.meta.env.VITE_SUPER_ADMIN_EMAIL?.toLowerCase() && (
                         <Link to="/admin-logs" className="hover:text-indigo-600 text-indigo-500 transition-colors">ADMIN LOGS</Link>
                     )}
 
