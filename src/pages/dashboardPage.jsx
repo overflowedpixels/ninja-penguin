@@ -14,7 +14,9 @@ import {
   Hash,
   Search,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  EyeOff,
+  Undo
 } from "lucide-react";
 import { collection, query, getDocs, orderBy, doc, updateDoc, where, limit, startAfter, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "../firebase";
@@ -219,6 +221,39 @@ export default function Dashboard() {
     setRequests(prev => prev.map(req => req.id === id ? { ...req, ...newData } : req));
   };
 
+  const handleHide = async (id, currentStatus) => {
+    setRequests(prev =>
+      prev.map(req =>
+        req.id === id ? { ...req, status: "hidden", originalStatus: currentStatus } : req
+      )
+    );
+    try {
+      const ref = doc(db, "requests", id);
+      await updateDoc(ref, { status: "hidden", originalStatus: currentStatus });
+      toast.success("Request hidden");
+    } catch (err) {
+      console.error("Hide error:", err);
+      toast.error("Failed to hide request");
+    }
+  };
+
+  const handleUnhide = async (id, originalStatus) => {
+    const statusToRestore = originalStatus || "pending";
+    setRequests(prev =>
+      prev.map(req =>
+        req.id === id ? { ...req, status: statusToRestore } : req
+      )
+    );
+    try {
+      const ref = doc(db, "requests", id);
+      await updateDoc(ref, { status: statusToRestore });
+      toast.success("Request restored");
+    } catch (err) {
+      console.error("Unhide error:", err);
+      toast.error("Failed to restore request");
+    }
+  };
+
 
   // ================= GENERATE DOCX =================
   const generateDocx = async (request, onError) => {
@@ -288,7 +323,7 @@ export default function Dashboard() {
             )}
 
             <div className="flex bg-white p-1 rounded-lg shadow-sm border border-gray-200">
-              {['pending', 'accepted', 'rejected'].map((status) => (
+              {['pending', 'accepted', 'rejected', 'hidden'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
@@ -334,6 +369,8 @@ export default function Dashboard() {
                       key={request.id}
                       request={request}
                       onAction={handleAction}
+                      onHide={handleHide}
+                      onUnhide={handleUnhide}
                       onGenerate={generateDocx}
                       primaryColor={PRIMARY_COLOR}
                       onViewImage={setSelectedImage}
@@ -397,7 +434,7 @@ export default function Dashboard() {
 
 // --- Sub-Components ---
 
-function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate, onEdit, onUpdate, isSelected, onToggleSelect }) {
+function RequestCard({ request, onAction, onHide, onUnhide, primaryColor, onViewImage, onGenerate, onEdit, onUpdate, isSelected, onToggleSelect }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -461,6 +498,15 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
           <div className="flex items-center gap-0.5">
 
             <StatusBadge status={request.status} className="mr-8" />
+            {request.status !== "hidden" && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onHide(request.id, request.status); }}
+                className="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors mr-1"
+                title="Hide Request"
+              >
+                <EyeOff size={20} />
+              </button>
+            )}
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors"
@@ -737,9 +783,18 @@ function RequestCard({ request, onAction, primaryColor, onViewImage, onGenerate,
           </>
         ) : (
           <>
-            <div className="col-span-2 text-center py-2 text-sm text-slate-500 bg-slate-100 rounded-lg border border-transparent">
+            <div className={`text-center py-2 text-sm text-slate-500 bg-slate-100 rounded-lg border border-transparent ${request.status === "hidden" ? "col-span-1" : "col-span-2"}`}>
               Request {request.status}
             </div>
+            {request.status === "hidden" && (
+              <button
+                onClick={() => onUnhide(request.id, request.originalStatus)}
+                className="col-span-1 flex items-center justify-center gap-1 text-center py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 bg-white border border-blue-200 rounded-lg transition-colors shadow-sm font-medium"
+              >
+                <Undo size={16} />
+                Get Back
+              </button>
+            )}
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="col-span-1 text-center py-2 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors border border-transparent"
@@ -828,6 +883,7 @@ function StatusBadge({ status }) {
     pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
     accepted: "bg-green-100 text-green-800 border-green-200",
     rejected: "bg-red-100 text-red-800 border-red-200",
+    hidden: "bg-gray-100 text-gray-800 border-gray-200",
   };
 
   const icons = {
