@@ -4,7 +4,7 @@ import { auth } from '../firebase';
 // Dynamically determine the base URL
 // Use VITE_API_URL if defined, otherwise fallback to localhost for development, or the production render URL depending on environment
 export const API_BASE_URL = import.meta.env.VITE_API_URL ||
-    (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://ninja-penguin-backend-1.onrender.com');
+    (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://pe-warranty-backend.onrender.com');
 
 export const apiClient = axios.create({
     baseURL: API_BASE_URL,
