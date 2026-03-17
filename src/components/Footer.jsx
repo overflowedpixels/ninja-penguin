@@ -1,5 +1,5 @@
 import React from 'react'
-import { Twitter, Linkedin, MapPin, Mail, Heart } from 'lucide-react';
+import { Twitter, Linkedin, MapPin, Mail, Heart,Instagram } from 'lucide-react';
 
 function Footer() {
   return (
@@ -10,42 +10,24 @@ function Footer() {
           
           {/* Column 1: Brand Info */}
           <div className="col-span-1 md:col-span-1">
-            <h2 className="text-2xl font-bold text-white mb-4 tracking-tighter">TrueSun</h2>
+            <h2 className="text-2xl font-bold text-white mb-4 tracking-tighter">TrueSun<br></br>Trading Company</h2>
             <p className="text-sm leading-relaxed mb-6 text-slate-400">
-              Innovating for the future. We build digital experiences that matter, delivering quality and performance in every line of code.
+              True Sun is a leading solar distributor dedicated to providing high-quality solar energy solutions to both residential and commercial clients
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="hover:text-white transition-colors duration-200">
-                <Twitter size={20} />
+              <a href="https://www.instagram.com/_true_sun_trading_company?utm_source=ig_web_button_share_sheet&igsh=ODdmZWVhMTFiMw==" className="hover:text-white transition-colors duration-200">
+                <Instagram size={20} />
               </a>
-              <a href="#" className="hover:text-white transition-colors duration-200">
+              <a href="https://www.linkedin.com/company/true-sun-trading-company/" className="hover:text-white transition-colors duration-200">
                 <Linkedin size={20} />
               </a>
 
             </div>
           </div>
 
-          {/* Column 2: Quick Links */}
-          <div>
-            <h3 className="text-white font-semibold mb-4 uppercase text-sm tracking-wider">Company</h3>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-blue-400 transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Careers</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Our Team</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Privacy Policy</a></li>
-            </ul>
-          </div>
+           
 
-          {/* Column 3: Resources */}
-          <div>
-            <h3 className="text-white font-semibold mb-4 uppercase text-sm tracking-wider">Resources</h3>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Blog</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Documentation</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Community</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Help Center</a></li>
-            </ul>
-          </div>
+           
 
           {/* Column 4: Contact & Devs */}
           <div>
@@ -53,11 +35,11 @@ function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start space-x-3">
                 <MapPin size={18} className="text-blue-500 shrink-0" />
-                <span>123 Innovation Drive,<br />Tech City, TC 90210</span>
+                <span>True Sun Trading Company, 1st Floor, 5/351 Theempalanngatt Building, M C Road, Mathumoola, Vazhappalli East, Changanacherry, Kottayam – 686103</span>
               </li>
               <li className="flex items-center space-x-3">
                 <Mail size={18} className="text-blue-500 shrink-0" />
-                <a href="mailto:hello@true.com" className="hover:text-white transition-colors">hello@true.com</a>
+                <a href="mailto:office@truesuntradingcompany.com," className="hover:text-white transition-colors">office@truesuntradingcompany.com</a>
               </li>
             </ul>
           </div>
@@ -77,9 +59,8 @@ function Footer() {
               <span>Developed with</span>
               <Heart size={14} className="text-red-500 fill-current animate-pulse" />
               <span>by</span>
-              <span className="text-slate-300 font-medium">Sreelekshmi</span>
-              <span>&</span>
-              <span className="text-slate-300 font-medium">Jithu</span>
+              <a href="https://www.fennechron.com"><span className="text-slate-300 font-medium">Fennechron Labs</span></a>
+              
             </div>
           </div>
         </div>
