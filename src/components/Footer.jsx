@@ -10,7 +10,7 @@ function Footer() {
           
           {/* Column 1: Brand Info */}
           <div className="col-span-1 md:col-span-1">
-            <h2 className="text-2xl font-bold text-white mb-4 tracking-tighter">TrueSun<br></br>Trading Company</h2>
+            <h2 className="text-2xl font-bold text-white mb-4 tracking-tighter">True Sun<br></br>Trading Company</h2>
             <p className="text-sm leading-relaxed mb-6 text-slate-400">
               True Sun is a leading solar distributor dedicated to providing high-quality solar energy solutions to both residential and commercial clients
             </p>
@@ -39,7 +39,7 @@ function Footer() {
               </li>
               <li className="flex items-center space-x-3">
                 <Mail size={18} className="text-blue-500 shrink-0" />
-                <a href="mailto:office@truesuntradingcompany.com," className="hover:text-white transition-colors">office@truesuntradingcompany.com</a>
+                <a href="mailto:technicaltruesuntradingcompany@gmail.com," className="hover:text-white transition-colors">technicaltruesuntradingcompany@gmail.com</a>
               </li>
             </ul>
           </div>
@@ -51,7 +51,7 @@ function Footer() {
         {/* Bottom Bar */}
         <div className="flex flex-col md:flex-row justify-between items-center text-sm">
           <div className="mb-4 md:mb-0">
-            <p>&copy; 2026 TrueSun All rights reserved.</p>
+            <p>&copy; 2026 True Sun Trading Company All rights reserved.</p>
           </div>
           
           <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6">
