@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { Clock, UserCircle, Activity, LayoutDashboard, Calendar } from 'lucide-react';
+import { Clock, UserCircle, Activity, LayoutDashboard, Calendar, X, Filter } from 'lucide-react';
 import { fetchAdminLogs } from '../services/api';
 
 export default function SuperAdminLogsPage() {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedDate, setSelectedDate] = useState('');
 
     useEffect(() => {
         const fetchLogs = async () => {
@@ -45,6 +46,18 @@ export default function SuperAdminLogsPage() {
         }
     };
 
+    const filteredLogs = selectedDate
+        ? logs.filter(log => {
+            if (!log.timestamp) return false;
+            const logDate = new Date(log.timestamp.seconds * 1000).toISOString().split('T')[0];
+            return logDate === selectedDate;
+        })
+        : logs;
+
+    const handleClearFilter = () => {
+        setSelectedDate('');
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8 font-sans">
             <div className="max-w-7xl mx-auto space-y-6">
@@ -60,9 +73,30 @@ export default function SuperAdminLogsPage() {
                             <p className="text-sm text-gray-500">View detailed interactions and decisions made by administrators</p>
                         </div>
                     </div>
-                    <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
-                        <Calendar size={16} />
-                        {new Date().toLocaleDateString()}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
+                            <Filter size={16} className="text-gray-400" />
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="bg-transparent border-none text-sm text-gray-700 focus:outline-none cursor-pointer"
+                                title="Filter by date"
+                            />
+                            {selectedDate && (
+                                <button
+                                    onClick={handleClearFilter}
+                                    className="p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+                                    title="Clear filter"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                        <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
+                            <Calendar size={16} />
+                            {new Date().toLocaleDateString()}
+                        </div>
                     </div>
                 </div>
 
@@ -73,13 +107,21 @@ export default function SuperAdminLogsPage() {
                             <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
                             <p className="text-gray-500 animate-pulse">Loading activity logs...</p>
                         </div>
-                    ) : logs.length === 0 ? (
+                    ) : filteredLogs.length === 0 ? (
                         <div className="p-16 text-center">
                             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <LayoutDashboard className="h-8 w-8 text-gray-400" />
                             </div>
-                            <h3 className="text-lg font-medium text-gray-900">No logs found</h3>
-                            <p className="text-gray-500 mt-1">There are no admin activities recorded yet.</p>
+                            <h3 className="text-lg font-medium text-gray-900">{selectedDate ? 'No logs for this date' : 'No logs found'}</h3>
+                            <p className="text-gray-500 mt-1">{selectedDate ? `No activity recorded on ${new Date(selectedDate).toLocaleDateString()}.` : 'There are no admin activities recorded yet.'}</p>
+                            {selectedDate && (
+                                <button
+                                    onClick={handleClearFilter}
+                                    className="mt-4 px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                                >
+                                    Clear Filter
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
@@ -93,7 +135,7 @@ export default function SuperAdminLogsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {logs.map((log) => (
+                                    {filteredLogs.map((log) => (
                                         <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
                                             {/* Timestamp */}
                                             <td className="py-4 px-6 whitespace-nowrap">
