@@ -538,6 +538,19 @@ function RequestCard({ request, onAction, onHide, onUnhide, primaryColor, onView
           <div className="space-y-2">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Integrator Details</p>
             <div className="flex items-center gap-2">
+              <Building size={16} className="text-slate-400" />
+              {!isEditing ? (
+                <p className="font-medium text-slate-700">{editData.integratorName}</p>
+              ) : (
+                <input
+                  value={editData.integratorName || ""}
+                  onChange={(e) => handleChange("integratorName", e.target.value)}
+                  placeholder="Integrator Name"
+                  className="border rounded px-2 py-1 text-sm w-full"
+                />
+              )}
+            </div>
+            <div className="flex items-center gap-2">
               <User size={16} className="text-slate-400" />
               {!isEditing ? (
                 <p>{editData.contactPerson}</p>
